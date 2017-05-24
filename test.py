@@ -23,8 +23,6 @@ L1a = tf.nn.sigmoid(tf.matmul(x_data1, W1a) + b1a)
 # b2a = tf.Variable(tf.random_normal([1]))
 # L2a = tf.nn.sigmoid(tf.matmul(L1a, W2a) + b2a)
 
-
-
 W1b = tf.Variable(tf.random_normal([10, 1]))
 b1b = tf.Variable(tf.random_normal([1]))
 L1b = tf.nn.sigmoid(tf.matmul(x_data2, W1b) + b1b)
