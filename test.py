@@ -4,9 +4,9 @@ import random
 
 tf.set_random_seed(777)  # reproducibility
 
-train1 = np.loadtxt('DuplicateDetectionModel/s1.txt', delimiter=',', dtype=np.float32)
-train2 = np.loadtxt('DuplicateDetectionModel/s2.txt', delimiter=',', dtype=np.float32)
-target = np.loadtxt('DuplicateDetectionModel/s3.txt', delimiter=',', dtype=np.float32)
+train1 = np.loadtxt('s1.txt', delimiter=',', dtype=np.float32)
+train2 = np.loadtxt('s2.txt', delimiter=',', dtype=np.float32)
+target = np.loadtxt('s3.txt', delimiter=',', dtype=np.float32)
 target = np.reshape(target, (-1, 1))
 learning_rate = 0.001
 
