@@ -196,8 +196,12 @@ with fc_graph.as_default():
 	# cost/loss function
 	cost = -tf.reduce_mean(y_data * tf.log(hypothesis) + (1 - y_data) * tf.log(1 - hypothesis))
 
-	train = tf.train.GradientDescentOptimizer(learning_rate=0.01).minimize(cost)
+	train = tf.train.AdamOptimizer(learning_rate=0.1).minimize(cost)
 
+	# Accuracy computation
+	# True if hypothesis>0.5 else False
+	predicted = tf.cast(hypothesis > 0.5, dtype=tf.float32)
+	accuracy = tf.reduce_mean(tf.cast(tf.equal(predicted, y_data), dtype=tf.float32))
 
 ###############################################################################################
 # for initializing the word embeddings from checkpoint!!
@@ -244,8 +248,8 @@ with tf.Session(graph=w2v_graph) as session:
 		print (w2v)
 	"""
 
-iteration = 10
-batch_num = 2000
+iteration = 1
+batch_num = 100
 ###############################################################################################
 # for initializing the word embeddings from checkpoint!!
 ###############################################################################################
@@ -256,7 +260,11 @@ with tf.Session(graph=fc_graph) as session:
 	init.run()
 
 	train_size = int(len(data_label) * 0.7)
-	test_size = len(data_label) - train_size
+	test_size = len(data_label) - int(len(data_label) * 0.95)
+
+	testX1 	= np.array(data_train1[-100:-1])
+	testX2 	= np.array(data_train2[-100:-1])
+	testY 	= np.array(data_label[-100:-1])
 
 	for epoch in range(iteration):
 
@@ -272,5 +280,10 @@ with tf.Session(graph=fc_graph) as session:
 			c, _, = session.run([cost, train], feed_dict={x_data1: batch_x1, x_data2:batch_x2, y_data:batch_y})
 			avg_cost += c / total_batch
 
-		if epoch % 10 == 0:
-			print('Epoch:', '%04d' % epoch, 'cost =', avg_cost)
+		save_path = saver.save(session, "./save_model/%dmodel.ckpt" %(epoch))
+		print("model saved in file: %s" % save_path)
+		print('Epoch:', '%04d' % epoch, 'cost =', avg_cost)
+
+	# Accuracy report
+	a = session.run(accuracy, feed_dict={x_data1: sen2vec(testX1), x_data2: sen2vec(testX2), y_data: np.array(testY).reshape(-1,1)})
+	print("\nAccuracy: ", a)
