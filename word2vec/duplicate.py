@@ -76,13 +76,17 @@ valid_examples = np.random.choice(valid_window, valid_size, replace=False)
 num_sampled = 64    # Number of negative examples to sample.
 
 
-graph = tf.Graph()
+w2v_graph = tf.Graph()
+fc_graph = tf.Graph()
 
-with graph.as_default():
+init = tf.global_variables_initializer()
 
-	###############################################################################################
-	# word embedding 
-	###############################################################################################
+saver = tf.train.Saver()
+
+###############################################################################################
+# word embedding 
+###############################################################################################
+with w2v_graph.as_default():
 	# Input data.
 	train_inputs = tf.placeholder(tf.int32, shape=[batch_size])
 	train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
@@ -122,50 +126,56 @@ with graph.as_default():
 		normalized_embeddings, valid_dataset)
 	similarity = tf.matmul(
 		valid_embeddings, normalized_embeddings, transpose_b=True)
-	###############################################################################################
-	# word embedding end
-	###############################################################################################
 
-	###############################################################################################
-	# full connected 
-	###############################################################################################
+###############################################################################################
+# full connected 
+###############################################################################################
+with fc_graph.as_default():
 	MAX_WORD_LENGTH = 50
 
-	x_data1 = tf.placeholder(tf.float32, [None, 10])
-	x_data2 = tf.placeholder(tf.float32, [None, 10])
+	x_data1 = tf.placeholder(tf.float32, [None, MAX_WORD_LENGTH, embedding_size])
+	x_data2 = tf.placeholder(tf.float32, [None, MAX_WORD_LENGTH, embedding_size])
 	y_data = tf.placeholder(tf.float32, [None, 1])
 
 	# weights & bias for nn layers
-	W1 = tf.Variable(tf.random_normal([10, 1]))
-	b1 = tf.Variable(tf.random_normal([1]))
-	L1 = tf.nn.sigmoid(tf.matmul(x_data1, W1) + b1)
+	W1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, embedding_size]))
+	b1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH]))
+	#L1 = tf.nn.sigmoid(tf.multiply(x_data1, W1) + b1)
+	L1 = tf.nn.sigmoid(tf.reduce_sum(tf.multiply(x_data1, W1), 2) + b1)
+	# ? x 50 x 128 => ? x 50
+	print ("L1")
+	print (L1)
 
-	W2 = tf.Variable(tf.random_normal([10, 1]))
-	b2 = tf.Variable(tf.random_normal([1]))
-	L2 = tf.nn.sigmoid(tf.matmul(x_data2, W2) + b2)
+	W2 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, embedding_size]))
+	b2 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH]))
+	#L2 = tf.nn.sigmoid(tf.multiply(x_data2, W2) + b2)
+	L2 = tf.nn.sigmoid(tf.reduce_sum(tf.multiply(x_data2, W2), 2) + b2 )
+	# ? x 50 x 128  => ? x 50
+	print ("L2")
+	print (L2)
 
-	x_merged = tf.concat([L1, L2], 1)
-	W3 = tf.Variable(tf.random_normal([2, 1]))
+	x_merged = tf.concat([L1, L2], 1) # (MAX_WORD_LENGTH * 2) * 1
+	# ? x 100 
+	print ("x_merged")
+	print (x_merged)
+
+	W3 = tf.Variable(tf.random_normal([2 * MAX_WORD_LENGTH, 1])) # each sentence => 1 output
 	b3 = tf.Variable(tf.random_normal([1]))
 
 	hypothesis = tf.sigmoid(tf.matmul(x_merged, W3) + b3)
+	print ("hypothesis")
+	print (hypothesis)
 
 	# cost/loss function
 	cost = -tf.reduce_mean(y_data * tf.log(hypothesis) + (1 - y_data) * tf.log(1 - hypothesis))
 
 	train = tf.train.GradientDescentOptimizer(learning_rate=0.01).minimize(cost)
-	###############################################################################################
-	# full connected end
-	###############################################################################################
-
-	# Add variable initializer.
-	init = tf.global_variables_initializer()
-
-	# Add ops to save and restore all the variables
-	saver = tf.train.Saver()
 
 
-with tf.Session(graph=graph) as session:
+###############################################################################################
+# for initializing the word embeddings from checkpoint!!
+###############################################################################################
+with tf.Session(graph=w2v_graph) as session:
 	# We must initialize all variables before we use them.
 	init.run()
 	print('Initialized')
@@ -175,7 +185,9 @@ with tf.Session(graph=graph) as session:
 	print ("model restored")
 
 	final_embeddings = normalized_embeddings.eval()
+	# final_embeddings, dictionary
 
+	"""
 	print ("\n")
 	print ("Embedding size : %s x %s" % (len(final_embeddings),len(final_embeddings[0])))
 	print ("Our embedding looks like..")
@@ -200,4 +212,11 @@ with tf.Session(graph=graph) as session:
 			w2v.append(final_embeddings[dictionary[w]])
 
 		print (w2v)
+	"""
 
+
+###############################################################################################
+# for initializing the word embeddings from checkpoint!!
+###############################################################################################
+with tf.Session(graph=fc_graph) as session:
+	pass	

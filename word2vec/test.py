@@ -4,15 +4,15 @@ import random
 
 tf.set_random_seed(777)  # reproducibility
 
-train1 = np.loadtxt('C:/Users/jjw/OneDrive/Git/DuplicateDetectionModel/s1.csv', delimiter=',', dtype=np.float32)
-train2 = np.loadtxt('C:/Users/jjw/OneDrive/Git/DuplicateDetectionModel/s2.csv', delimiter=',', dtype=np.float32)
-target = np.loadtxt('C:/Users/jjw/OneDrive/Git/DuplicateDetectionModel/s3.csv', delimiter=',', dtype=np.float32)
+train1 = np.loadtxt('../proto/s1.csv', delimiter=',', dtype=np.float32)
+train2 = np.loadtxt('../proto/s2.csv', delimiter=',', dtype=np.float32)
+target = np.loadtxt('../proto/s3.csv', delimiter=',', dtype=np.float32)
 target = np.reshape(target, (-1, 1))
 
 
-test1 = np.loadtxt('C:/Users/jjw/OneDrive/Git/DuplicateDetectionModel/ts11.txt', delimiter=',', dtype=np.float32)
-test2 = np.loadtxt('C:/Users/jjw/OneDrive/Git/DuplicateDetectionModel/ts22.txt', delimiter=',', dtype=np.float32)
-test_target = np.loadtxt('C:/Users/jjw/OneDrive/Git/DuplicateDetectionModel/ts33.txt', delimiter=',', dtype=np.float32)
+test1 = np.loadtxt('../proto/ts11.txt', delimiter=',', dtype=np.float32)
+test2 = np.loadtxt('../proto/ts22.txt', delimiter=',', dtype=np.float32)
+test_target = np.loadtxt('../proto/ts33.txt', delimiter=',', dtype=np.float32)
 test_target = np.reshape(target, (-1, 1))
 
 learning_rate = 0.001
@@ -25,10 +25,14 @@ y_data = tf.placeholder(tf.float32, [None, 1])
 W1 = tf.Variable(tf.random_normal([10, 1]))
 b1 = tf.Variable(tf.random_normal([1]))
 L1 = tf.nn.sigmoid(tf.matmul(x_data1, W1) + b1)
+print ("L1")
+print (L1)
 
 W2 = tf.Variable(tf.random_normal([10, 1]))
 b2 = tf.Variable(tf.random_normal([1]))
 L2 = tf.nn.sigmoid(tf.matmul(x_data2, W2) + b2)
+print ("L2")
+print (L2)
 
 x_merged = tf.concat([L1, L2], 1)
 W3 = tf.Variable(tf.random_normal([2, 1]))
