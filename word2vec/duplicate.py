@@ -14,17 +14,45 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 
 import tensorflow as tf
 
+data_train1 = data_train2 = []
+data_label = []
+
 # Read the data into a list of strings.
 def make_voca(filename):
 	data = []
 	with open(filename, 'r', encoding='utf-8') as f:
 	# with open(filename, 'r') as f:
 		reader = csv.reader(f, delimiter=',')
-		for line in reader:
-			data += line[3].split() + line[4].split()
+		for idx, line in enumerate(reader):
+			if idx > 0:
+				data_train1.append(line[3])
+				data_train2.append(line[4])
+				data_label.append(int(line[5]))
+				data += line[3].split() + line[4].split()
 	return data
 
-filename = './train.csv'
+def sen2vec (pure_data):
+
+	vec_data = []
+
+	for sentence in pure_data:
+
+		w2v = []
+		words = sentence.split()
+
+		for i in range (MAX_WORD_LENGTH):
+			try:
+				w2v.append(final_embeddings[dictionary[words[i]]])
+			except:
+				w2v.append(final_embeddings[dictionary['UNK']])
+
+		# [None, 50, 128]
+		vec_data.append(w2v)
+
+	return vec_data
+
+
+filename = 'train.csv'
 vocabulary = make_voca(filename)
 
 print('Data size', len(vocabulary))
@@ -90,7 +118,7 @@ with w2v_graph.as_default():
 	valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
 	# Ops and variables pinned to the CPU because of missing GPU implementation
-	with tf.device('/cpu:0'):
+	with tf.device('/gpu:0'):
 		# Look up embeddings for inputs.
 		embeddings = tf.Variable(
 				tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
@@ -175,7 +203,7 @@ with fc_graph.as_default():
 # for initializing the word embeddings from checkpoint!!
 ###############################################################################################
 with tf.Session(graph=w2v_graph) as session:
-	
+
 	init = tf.global_variables_initializer()
 	saver = tf.train.Saver()
 	# We must initialize all variables before we use them.
@@ -216,14 +244,33 @@ with tf.Session(graph=w2v_graph) as session:
 		print (w2v)
 	"""
 
-
+iteration = 10
+batch_num = 2000
 ###############################################################################################
 # for initializing the word embeddings from checkpoint!!
 ###############################################################################################
 with tf.Session(graph=fc_graph) as session:
-
-
 	init = tf.global_variables_initializer()
 	saver = tf.train.Saver()
 
-	pass	
+	init.run()
+
+	train_size = int(len(data_label) * 0.7)
+	test_size = len(data_label) - train_size
+
+	for epoch in range(iteration):
+
+		avg_cost = 0
+		total_batch = int(train_size / batch_num)
+
+		for iter in range(total_batch):
+
+			batch_x1 = np.array(sen2vec(data_train1[iter * batch_num : (iter + 1) * batch_num]))
+			batch_x2 = np.array(sen2vec(data_train2[iter * batch_num : (iter + 1) * batch_num]))
+			batch_y  = np.array(data_label[iter * batch_num: (iter + 1) * batch_num]).reshape(-1,1)
+
+			c, _, = session.run([cost, train], feed_dict={x_data1: batch_x1, x_data2:batch_x2, y_data:batch_y})
+			avg_cost += c / total_batch
+
+		if epoch % 10 == 0:
+			print('Epoch:', '%04d' % epoch, 'cost =', avg_cost)
