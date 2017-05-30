@@ -17,8 +17,8 @@ import tensorflow as tf
 # Read the data into a list of strings.
 def make_voca(filename):
 	data = []
-	#with open(filename, 'r', encoding='utf-8') as f:
-	with open(filename, 'r') as f:
+	with open(filename, 'r', encoding='utf-8') as f:
+	# with open(filename, 'r') as f:
 		reader = csv.reader(f, delimiter=',')
 		for line in reader:
 			data += line[3].split() + line[4].split()
@@ -151,14 +151,14 @@ with tf.Session(graph=graph) as session:
 	print ("Our reversed dictonary looks like..")
 	print (str(reverse_dictionary)[0:500])
 
-	
+
 	while True:
 		sentence = raw_input("type sentence : ")
-		words = sentence.split()	
+		words = sentence.split()
 		print (words)
 
 		w2v = []
-		for w in words:	
+		for w in words:
 			w2v.append(final_embeddings[dictionary[w]])
 
 		print (w2v)

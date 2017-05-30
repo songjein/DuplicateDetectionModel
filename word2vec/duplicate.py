@@ -17,8 +17,8 @@ import tensorflow as tf
 # Read the data into a list of strings.
 def make_voca(filename):
 	data = []
-	#with open(filename, 'r', encoding='utf-8') as f:
-	with open(filename, 'r') as f:
+	with open(filename, 'r', encoding='utf-8') as f:
+	# with open(filename, 'r') as f:
 		reader = csv.reader(f, delimiter=',')
 		for line in reader:
 			data += line[3].split() + line[4].split()
@@ -79,9 +79,6 @@ num_sampled = 64    # Number of negative examples to sample.
 w2v_graph = tf.Graph()
 fc_graph = tf.Graph()
 
-init = tf.global_variables_initializer()
-
-saver = tf.train.Saver()
 
 ###############################################################################################
 # word embedding 
@@ -126,6 +123,8 @@ with w2v_graph.as_default():
 		normalized_embeddings, valid_dataset)
 	similarity = tf.matmul(
 		valid_embeddings, normalized_embeddings, transpose_b=True)
+
+
 
 ###############################################################################################
 # full connected 
@@ -176,6 +175,9 @@ with fc_graph.as_default():
 # for initializing the word embeddings from checkpoint!!
 ###############################################################################################
 with tf.Session(graph=w2v_graph) as session:
+	
+	init = tf.global_variables_initializer()
+	saver = tf.train.Saver()
 	# We must initialize all variables before we use them.
 	init.run()
 	print('Initialized')
@@ -219,4 +221,9 @@ with tf.Session(graph=w2v_graph) as session:
 # for initializing the word embeddings from checkpoint!!
 ###############################################################################################
 with tf.Session(graph=fc_graph) as session:
+
+
+	init = tf.global_variables_initializer()
+	saver = tf.train.Saver()
+
 	pass	

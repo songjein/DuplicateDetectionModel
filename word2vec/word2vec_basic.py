@@ -20,12 +20,10 @@ from __future__ import print_function
 
 import collections
 import math
-import os
 import random
 import csv
 
 import numpy as np
-from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 
 import tensorflow as tf
@@ -33,14 +31,14 @@ import tensorflow as tf
 # Read the data into a list of strings.
 def make_voca(filename):
 	data = []
-	#with open(filename, 'r', encoding='utf-8') as f:
-	with open(filename, 'r') as f:
+	with open(filename, 'r', encoding='utf-8') as f:
+	# with open(filename, 'r') as f:
 		reader = csv.reader(f, delimiter=',')
 		for line in reader:
 			data += line[3].split() + line[4].split()
 	return data
 
-filename = './train.csv'
+filename = '../train.csv'
 vocabulary = make_voca(filename)
 
 print('Data size', len(vocabulary))
