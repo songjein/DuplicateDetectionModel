@@ -196,7 +196,7 @@ with fc_graph.as_default():
 	# cost/loss function
 	cost = -tf.reduce_mean(y_data * tf.log(hypothesis) + (1 - y_data) * tf.log(1 - hypothesis))
 
-	train = tf.train.AdamOptimizer(learning_rate=0.1).minimize(cost)
+	train = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
 
 	# Accuracy computation
 	# True if hypothesis>0.5 else False
@@ -248,8 +248,8 @@ with tf.Session(graph=w2v_graph) as session:
 		print (w2v)
 	"""
 
-iteration = 1
-batch_num = 100
+iteration = 20
+batch_num = 50
 ###############################################################################################
 # for initializing the word embeddings from checkpoint!!
 ###############################################################################################
@@ -260,11 +260,20 @@ with tf.Session(graph=fc_graph) as session:
 	init.run()
 
 	train_size = int(len(data_label) * 0.7)
-	test_size = len(data_label) - int(len(data_label) * 0.95)
 
-	testX1 	= np.array(data_train1[-100:-1])
-	testX2 	= np.array(data_train2[-100:-1])
-	testY 	= np.array(data_label[-100:-1])
+	shuffle_index = [i for i in range(train_size, len(data_label))]
+	random.shuffle(shuffle_index)
+	tX1 = []
+	tX2 = []
+	tY = []
+	for i in shuffle_index[:1000]:
+		tX1.append(data_train1[i])
+		tX2.append(data_train2[i])
+		tY.append(data_label[i])
+
+	testX1 	= np.array(tX1)
+	testX2 	= np.array(tX2)
+	testY 	= np.array(tY)
 
 	for epoch in range(iteration):
 
