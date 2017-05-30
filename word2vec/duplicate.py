@@ -20,8 +20,8 @@ data_label = []
 # Read the data into a list of strings.
 def make_voca(filename):
 	data = []
-	with open(filename, 'r', encoding='utf-8') as f:
-	# with open(filename, 'r') as f:
+	#with open(filename, 'r', encoding='utf-8') as f:
+	with open(filename, 'r') as f:
 		reader = csv.reader(f, delimiter=',')
 		for idx, line in enumerate(reader):
 			if idx > 0:
@@ -118,7 +118,7 @@ with w2v_graph.as_default():
 	valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
 	# Ops and variables pinned to the CPU because of missing GPU implementation
-	with tf.device('/gpu:0'):
+	with tf.device('/cpu:0'):
 		# Look up embeddings for inputs.
 		embeddings = tf.Variable(
 				tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
@@ -168,25 +168,39 @@ with fc_graph.as_default():
 	W1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, embedding_size]))
 	b1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH]))
 	#L1 = tf.nn.sigmoid(tf.multiply(x_data1, W1) + b1)
-	L1 = tf.nn.sigmoid(tf.reduce_sum(tf.multiply(x_data1, W1), 2) + b1)
+	L1 = tf.nn.tanh(tf.reduce_sum(tf.multiply(x_data1, W1), 2) + b1)
 	# ? x 50 x 128 => ? x 50
 	print ("L1")
 	print (L1)
 
+	# first sentence ? x 50 => ? x 10
+	W1_1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, 10]))
+	b1_1 = tf.Variable(tf.random_normal([10]))
+	L1_1 = tf.nn.tanh(tf.matmul(L1, W1_1) + b1_1) 
+	print ("L1_1")
+	print (L1_1)
+
 	W2 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, embedding_size]))
 	b2 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH]))
 	#L2 = tf.nn.sigmoid(tf.multiply(x_data2, W2) + b2)
-	L2 = tf.nn.sigmoid(tf.reduce_sum(tf.multiply(x_data2, W2), 2) + b2 )
+	L2 = tf.nn.tanh(tf.reduce_sum(tf.multiply(x_data2, W2), 2) + b2 )
 	# ? x 50 x 128  => ? x 50
 	print ("L2")
 	print (L2)
 
-	x_merged = tf.concat([L1, L2], 1) # (MAX_WORD_LENGTH * 2) * 1
-	# ? x 100 
+	# second sentence ? x 50 => ? x 10
+	W2_1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, 10]))
+	b2_1 = tf.Variable(tf.random_normal([10]))
+	L2_1 = tf.nn.tanh(tf.matmul(L2, W2_1) + b2_1) 
+	print ("L2_1")
+	print (L2_1)
+
+	x_merged = tf.concat([L1_1, L2_1], 1) # (MAX_WORD_LENGTH * 2) * 1
+	# ? x 20
 	print ("x_merged")
 	print (x_merged)
 
-	W3 = tf.Variable(tf.random_normal([2 * MAX_WORD_LENGTH, 1])) # each sentence => 1 output
+	W3 = tf.Variable(tf.random_normal([2 * 10, 1])) # each sentence => 1 output
 	b3 = tf.Variable(tf.random_normal([1]))
 
 	hypothesis = tf.sigmoid(tf.matmul(x_merged, W3) + b3)
@@ -248,7 +262,7 @@ with tf.Session(graph=w2v_graph) as session:
 		print (w2v)
 	"""
 
-iteration = 20
+iteration = 100
 batch_num = 50
 ###############################################################################################
 # for initializing the word embeddings from checkpoint!!
@@ -260,20 +274,22 @@ with tf.Session(graph=fc_graph) as session:
 	init.run()
 
 	train_size = int(len(data_label) * 0.7)
+	
+	def getTestData():
+		shuffle_index = [i for i in range(train_size, len(data_label))]
+		random.shuffle(shuffle_index)
+		tX1 = []
+		tX2 = []
+		tY = []
+		for i in shuffle_index[:1000]:
+			tX1.append(data_train1[i])
+			tX2.append(data_train2[i])
+			tY.append(data_label[i])
 
-	shuffle_index = [i for i in range(train_size, len(data_label))]
-	random.shuffle(shuffle_index)
-	tX1 = []
-	tX2 = []
-	tY = []
-	for i in shuffle_index[:1000]:
-		tX1.append(data_train1[i])
-		tX2.append(data_train2[i])
-		tY.append(data_label[i])
-
-	testX1 	= np.array(tX1)
-	testX2 	= np.array(tX2)
-	testY 	= np.array(tY)
+		testX1 	= np.array(tX1)
+		testX2 	= np.array(tX2)
+		testY 	= np.array(tY)
+		return testX1, testX2, testY
 
 	for epoch in range(iteration):
 
@@ -293,6 +309,7 @@ with tf.Session(graph=fc_graph) as session:
 		print("model saved in file: %s" % save_path)
 		print('Epoch:', '%04d' % epoch, 'cost =', avg_cost)
 
-	# Accuracy report
-	a = session.run(accuracy, feed_dict={x_data1: sen2vec(testX1), x_data2: sen2vec(testX2), y_data: np.array(testY).reshape(-1,1)})
-	print("\nAccuracy: ", a)
+		# Accuracy report
+		testX1, testX2, testY = getTestData()
+		a = session.run(accuracy, feed_dict={x_data1: sen2vec(testX1), x_data2: sen2vec(testX2), y_data: np.array(testY).reshape(-1,1)})
+		print("\nAccuracy: ", a)
