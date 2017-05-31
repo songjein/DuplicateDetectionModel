@@ -119,15 +119,15 @@ with fc_graph.as_default():
 
 	# Filter for x_data1 (same dim) 
 	W1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, embedding_size]))
-	b1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH]))
+	b1 = tf.Variable(tf.random_normal([embedding_size]))
 	# L1 = tf.nn.sigmoid(tf.multiply(x_data1, W1) + b1)
-	L1 = tf.nn.tanh(tf.reduce_sum(tf.multiply(x_data1, W1), 2) + b1)
+	L1 = tf.nn.tanh(tf.reduce_sum(tf.multiply(x_data1, W1), 1) + b1)
 	# ? x 50 x 128 => ? x 50
 	print("L1")
 	print(L1)
 
 	# first sentence ? x 50 => ? x 25
-	W1_1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, 25]))
+	W1_1 = tf.Variable(tf.random_normal([embedding_size, 25]))
 	b1_1 = tf.Variable(tf.random_normal([25]))
 	L1_1 = tf.nn.tanh(tf.matmul(L1, W1_1) + b1_1)
 	print("L1_1")
@@ -135,15 +135,15 @@ with fc_graph.as_default():
 
 	# Filter for x_data2 (same dim) 
 	W2 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, embedding_size]))
-	b2 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH]))
+	b2 = tf.Variable(tf.random_normal([embedding_size]))
 	# L2 = tf.nn.sigmoid(tf.multiply(x_data2, W2) + b2)
-	L2 = tf.nn.tanh(tf.reduce_sum(tf.multiply(x_data2, W2), 2) + b2)
+	L2 = tf.nn.tanh(tf.reduce_sum(tf.multiply(x_data2, W2), 1) + b2)
 	# ? x 50 x 128  => ? x 50
 	print("L2")
 	print(L2)
 
 	# second sentence ? x 50 => ? x 25 
-	W2_1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH, 25]))
+	W2_1 = tf.Variable(tf.random_normal([embedding_size, 25]))
 	b2_1 = tf.Variable(tf.random_normal([25]))
 	L2_1 = tf.nn.tanh(tf.matmul(L2, W2_1) + b2_1)
 	print("L2_1")
