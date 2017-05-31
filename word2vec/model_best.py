@@ -149,7 +149,7 @@ with fc_graph.as_default():
 	print("L2_1")
 	print(L2_1)
 
-	x_merged = tf.concat([L1_1, L2_1], 1)  # (MAX_WORD_LENGTH * 2) * 1
+	x_merged = tf.concat([L1_1, L2_1], 1)  
 	# ? x 20 
 	print("x_merged")
 	print(x_merged)
