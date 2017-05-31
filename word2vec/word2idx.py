@@ -6,7 +6,9 @@ import csv
 import numpy as np
 
 MAX_WORD_LENGTH = 50
-data_train1 = data_train2 = []
+
+data_train1 = []
+data_train2 = []
 data_label = []
 
 # Read the data into a list of strings.
@@ -82,4 +84,6 @@ del vocabulary  # Hint to reduce memory.
 x1 = np.array(sen2vec(data_train1))
 x2 = np.array(sen2vec(data_train2))
 y = np.array(data_label)
+
+print (x1.shape, x2.shape, y.shape)
 np.savez('train_idx.npz', train1=x1, train2=x2, label=y)
