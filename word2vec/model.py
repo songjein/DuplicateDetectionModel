@@ -167,6 +167,9 @@ with fc_graph.as_default():
 	predicted = tf.cast(hypothesis > 0.5, dtype=tf.float32)
 	accuracy = tf.reduce_mean(tf.cast(tf.equal(predicted, y_data), dtype=tf.float32))
 
+###############################################################################################
+# for initializing the word embeddings from checkpoint!!
+###############################################################################################
 with tf.Session(graph=w2v_graph) as session:
 	init = tf.global_variables_initializer()
 	saver = tf.train.Saver()
@@ -176,16 +179,16 @@ with tf.Session(graph=w2v_graph) as session:
 
 	# save the variables to disk
 	save_path = saver.restore(session, "./saver/w2v.ckpt")
-	print("model restored")
+	print("word2vec restored")
 
 	# final_embeddings, dictionary
 	final_embeddings = normalized_embeddings.eval()
 
+###############################################################################################
+# training 
+###############################################################################################
 iteration = 200
 batch_num = 10000
-###############################################################################################
-# for initializing the word embeddings from checkpoint!!
-###############################################################################################
 with tf.Session(graph=fc_graph) as session:
 	init = tf.global_variables_initializer()
 	saver = tf.train.Saver()
