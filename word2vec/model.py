@@ -12,7 +12,7 @@ import tensorflow as tf
 def load_data(filename):
 
 	xy = np.load(filename)
-
+	
 	_x1 = xy['train1'].reshape(-1, 50)
 	_x2 = xy['train2'].reshape(-1, 50)
 	_y = xy['label'].reshape(-1, 1)
@@ -28,9 +28,12 @@ def load_data(filename):
 
 	return _x1, _x2, _y
 
+# (404290, 50, 1) (404290, 50, 1) (404290,)
 filename = 'train_idx.npz'
+
 _x_data1, _x_data2, _y_data = load_data(filename)
-idx_test1 = idx_test2 = []
+idx_test1 = []
+idx_test2 = []
 
 ###############################################################################################
 # variables
