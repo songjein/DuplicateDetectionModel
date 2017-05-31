@@ -14,7 +14,8 @@ data_label = []
 # Read the data into a list of strings.
 def make_voca(filename):
     data = []
-    with open(filename, 'r', encoding='utf-8') as f:
+    #with open(filename, 'r', encoding='utf-8') as f:
+    with open(filename, 'r') as f:
     # with open(filename, 'r') as f:
         reader = csv.reader(f, delimiter=',')
         for idx, line in enumerate(reader):

@@ -1,3 +1,4 @@
 *.csv
 */saver/*
-*/save_model/*
+*/save_model*/*
+*.npz

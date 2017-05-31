@@ -122,13 +122,13 @@ with fc_graph.as_default():
 	b1 = tf.Variable(tf.random_normal([embedding_size]))
 	# L1 = tf.nn.sigmoid(tf.multiply(x_data1, W1) + b1)
 	L1 = tf.nn.tanh(tf.reduce_sum(tf.multiply(x_data1, W1), 1) + b1)
-	# ? x 50 x 128 => ? x 50
+	# ? x 50 x 128 => ? x 128 
 	print("L1")
 	print(L1)
 
-	# first sentence ? x 50 => ? x 25
-	W1_1 = tf.Variable(tf.random_normal([embedding_size, 25]))
-	b1_1 = tf.Variable(tf.random_normal([25]))
+	# first sentence ? x 128 => ? x 10
+	W1_1 = tf.Variable(tf.random_normal([embedding_size, 10]))
+	b1_1 = tf.Variable(tf.random_normal([10]))
 	L1_1 = tf.nn.tanh(tf.matmul(L1, W1_1) + b1_1)
 	print("L1_1")
 	print(L1_1)
@@ -138,27 +138,27 @@ with fc_graph.as_default():
 	b2 = tf.Variable(tf.random_normal([embedding_size]))
 	# L2 = tf.nn.sigmoid(tf.multiply(x_data2, W2) + b2)
 	L2 = tf.nn.tanh(tf.reduce_sum(tf.multiply(x_data2, W2), 1) + b2)
-	# ? x 50 x 128  => ? x 50
+	# ? x 50 x 128  => ? x 128 
 	print("L2")
 	print(L2)
 
-	# second sentence ? x 50 => ? x 25 
-	W2_1 = tf.Variable(tf.random_normal([embedding_size, 25]))
-	b2_1 = tf.Variable(tf.random_normal([25]))
+	# second sentence ? x 128 => ? x 10
+	W2_1 = tf.Variable(tf.random_normal([embedding_size, 10]))
+	b2_1 = tf.Variable(tf.random_normal([10]))
 	L2_1 = tf.nn.tanh(tf.matmul(L2, W2_1) + b2_1)
 	print("L2_1")
 	print(L2_1)
 
 	x_merged = tf.concat([L1_1, L2_1], 1)  # (MAX_WORD_LENGTH * 2) * 1
-	# ? x 50 
+	# ? x 20 
 	print("x_merged")
 	print(x_merged)
 
-	W3 = tf.Variable(tf.random_normal([2 * 25, 10]))  # each sentence => 1 output
+	W3 = tf.Variable(tf.random_normal([2 * 10, 10])) 
 	b3 = tf.Variable(tf.random_normal([10]))
 	L3 = tf.nn.tanh(tf.matmul(x_merged, W3 + b3))
 
-	W4 = tf.Variable(tf.random_normal([10, 1]))  # each sentence => 1 output
+	W4 = tf.Variable(tf.random_normal([10, 1]))  
 	b4 = tf.Variable(tf.random_normal([1]))
 
 	hypothesis = tf.sigmoid(tf.matmul(L3, W4) + b4)
@@ -196,7 +196,7 @@ with tf.Session(graph=w2v_graph) as session:
 # training 
 ###############################################################################################
 iteration = 200
-batch_num = 10000
+batch_num = 500
 with tf.Session(graph=fc_graph) as session:
 	init = tf.global_variables_initializer()
 	saver = tf.train.Saver()
