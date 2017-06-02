@@ -101,83 +101,70 @@ with w2v_graph.as_default():
     similarity = tf.matmul(
         valid_embeddings, normalized_embeddings, transpose_b=True)
 
+
+num_filters = 50
+filter_size = 10
 ###############################################################################################
-# full connected 
+# full connected
 ###############################################################################################
 with fc_graph.as_default():
     MAX_WORD_LENGTH = 50
 
-    x_idx1 = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH], name='idx1')
-    x_idx2 = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH], name='idx2')
+    x_idx1  = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH], name='idx1')
+    x_idx2  = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH], name='idx2')
 
     x_data1 = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH, embedding_size, 1], name='x_data1')
     x_data2 = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH, embedding_size, 1], name='x_data2')
-    y_data = tf.placeholder(tf.float32, [None, 1], name='y')
+    y_data  = tf.placeholder(tf.float32, [None, 1], name='y')
 
     embeddings = tf.placeholder(tf.float32, [vocabulary_size, embedding_size])
 
     x_data1 = tf.reshape(tf.nn.embedding_lookup(embeddings, x_idx1), [-1, MAX_WORD_LENGTH, embedding_size, 1])
     x_data2 = tf.reshape(tf.nn.embedding_lookup(embeddings, x_idx2), [-1, MAX_WORD_LENGTH, embedding_size, 1])
 
-    # Filter size, 2x2 and the number of filter, 16.
-    W1_A = tf.Variable(tf.random_normal([2, embedding_size, 1, 100], stddev=0.01))
     # Filter for x_data1 (same dim)
-    L1_A = tf.nn.conv2d(x_data1, W1_A, strides=[1, 1, 1, 1], padding='VALID')
-    L1_A = tf.nn.relu6(L1_A)
-    L1_A = tf.nn.max_pool(L1_A, ksize=[1, MAX_WORD_LENGTH - 2 + 1, 1, 1],
-                          strides=[1, 1, 1, 1], padding='VALID')
-    L1_A = tf.nn.dropout(L1_A, keep_prob=0.5)
-    L1_A = tf.reshape(L1_A, [-1, 1 * 1 * 100])
+    conv1a = tf.layers.conv2d (inputs=x_data1, filters=num_filters, kernel_size=[filter_size, embedding_size], padding='VALID', activation=tf.nn.relu)
+    conv1a = tf.layers.max_pooling2d(inputs=conv1a, pool_size=[MAX_WORD_LENGTH-filter_size+1, 1], strides=1, padding='VALID')
+    conv1a = tf.nn.dropout(conv1a, keep_prob=0.7)
+    conv1a = tf.reshape(conv1a, [-1, 1 * 1 * num_filters])
 
-    # ? x 50 x 128 => ? x 128
-    print("L1_A")
-    print(L1_A)
+    print("conv1a")
+    print(conv1a)
 
-    # Filter size, 3x3 and the number of filter, 16.
-    W1_B = tf.Variable(tf.random_normal([2, embedding_size, 1, 100], stddev=0.01))
-    # Filter for x_data1 (same dim)
-    L1_B = tf.nn.conv2d(x_data2, W1_B, strides=[1, 1, 1, 1], padding='VALID')
-    L1_B = tf.nn.relu6(L1_B)
-    L1_B = tf.nn.max_pool(L1_B, ksize=[1, MAX_WORD_LENGTH - 2 + 1, 1, 1],
-                          strides=[1, 1, 1, 1], padding='VALID')
-    L1_B = tf.nn.dropout(L1_B, keep_prob=0.5)
-    L1_B = tf.reshape(L1_B, [-1, 1 * 1 * 100])
+    # Filter for x_data2 (same dim)
+    conv1b = tf.layers.conv2d (inputs=x_data2, filters=num_filters, kernel_size=[filter_size, embedding_size], padding='VALID', activation=tf.nn.relu)
+    conv1b = tf.layers.max_pooling2d(inputs=conv1b, pool_size=[MAX_WORD_LENGTH-filter_size+1, 1], strides=1, padding='VALID')
+    conv1b = tf.nn.dropout(conv1b, keep_prob=0.7)
+    conv1b = tf.reshape(conv1b, [-1, 1 * 1 * num_filters])
 
-    # ? x 50 x 128 => ? x 128
-    print("L1_B")
-    print(L1_B)
+    print("conv1b")
+    print(conv1b)
 
     # L1_A FC 25x64x32 inputs -> 51200 outputs
-    W3_A = tf.get_variable("W3_A", shape=[1 * 1 * 100, 100],
+    W_A         = tf.get_variable("W_A", shape=[1 * 1 * num_filters, 1],
                            initializer=tf.contrib.layers.xavier_initializer())
-    b3_A = tf.Variable(tf.random_normal([100]))
-    L3_A = tf.nn.relu6(tf.matmul(L1_A, W3_A) + b3_A)
+    b_A         = tf.Variable(tf.random_normal([1]))
+    fc_A        = tf.nn.relu(tf.matmul(conv1a, W_A) + b_A)
     # L2_A = tf.nn.dropout(L2_A, keep_prob=0.7)
-    print("L3_A")
-    print(L3_A)
+    print("fc_A")
+    print(fc_A)
 
     # second sentence ? x 128 => ? x 10
-    W3_B = tf.get_variable("W3_B", shape=[1 * 1 * 100, 100],
+    W_B         = tf.get_variable("W_B", shape=[1 * 1 * num_filters, 1],
                            initializer=tf.contrib.layers.xavier_initializer())
-    b3_B = tf.Variable(tf.random_normal([100]))
-    L3_B = tf.nn.relu6(tf.matmul(L1_B, W3_B) + b3_B)
+    b_B         = tf.Variable(tf.random_normal([1]))
+    fc_B        = tf.nn.relu(tf.matmul(conv1b, W_B) + b_B)
     # L2_A = tf.nn.dropout(L2_A, keep_prob=0.7)
-    print("L3_B")
-    print(L3_B)
+    print("fc_B")
+    print(fc_B)
 
-    x_merged = tf.concat([L3_A, L3_B], 1)
-    # ? x 50000
-    print("x_merged")
-    print(x_merged)
+    fc_merged = tf.concat([fc_A, fc_B], 1)
+    print("fc_merged")
+    print(fc_merged)
 
-    W4 = tf.Variable(tf.random_normal([2 * 100, 100]))
-    b4 = tf.Variable(tf.random_normal([100]))
-    L4 = tf.nn.relu6(tf.matmul(x_merged, W4 + b4))
-
-    W5 = tf.Variable(tf.random_normal([100, 1]))
-    b5 = tf.Variable(tf.random_normal([1]))
-
-    hypothesis = tf.sigmoid(tf.matmul(L4, W5) + b5)
+    W          = tf.Variable(tf.random_normal([2 * 1, 1]))
+    b          = tf.Variable(tf.random_normal([1]))
+    hypothesis = tf.sigmoid(tf.matmul(fc_merged, W) + b)
 
     print("hypothesis")
     print(hypothesis)
@@ -185,7 +172,7 @@ with fc_graph.as_default():
     # cost/loss function
     cost = -tf.reduce_mean(y_data * tf.log(hypothesis) + (1 - y_data) * tf.log(1 - hypothesis))
 
-    train = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(cost)
+    train = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
 
     # Accuracy computation
     # True if hypothesis>0.5 else False
@@ -210,10 +197,10 @@ with tf.Session(graph=w2v_graph) as session:
     final_embeddings = normalized_embeddings.eval()
 
 ###############################################################################################
-# training 
+# training
 ###############################################################################################
-iteration = 200
-batch_num = 100
+iteration = 100
+batch_num = 50
 with tf.Session(graph=fc_graph) as session:
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
@@ -231,8 +218,7 @@ with tf.Session(graph=fc_graph) as session:
             batch_x2 = _x_data2[iter * batch_num: (iter + 1) * batch_num]
             batch_y = _y_data[iter * batch_num: (iter + 1) * batch_num]
 
-            c, _, = session.run([cost, train], feed_dict={x_idx1: batch_x1, x_idx2: batch_x2, y_data: batch_y,
-                                                          embeddings: final_embeddings})
+            c, _, = session.run([cost, train], feed_dict={x_idx1: batch_x1, x_idx2: batch_x2, y_data: batch_y, embeddings: final_embeddings})
             avg_cost += c / total_batch
 
         # save_path = saver.save(session, "./save_model/%dmodel.ckpt" % (epoch))
