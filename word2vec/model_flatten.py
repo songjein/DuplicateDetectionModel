@@ -1,10 +1,19 @@
 from __future__ import absolute_import
-from __future__ import division
+from __future__ import division 
 from __future__ import print_function
 import math
 import random
 import numpy as np
 import tensorflow as tf
+
+import os
+import time
+import datetime
+
+from flask import Flask, request, render_template
+#from flask_cors import CORS, cross_origin
+
+from word2idx import sen2vec
 
 tf.set_random_seed(777)  # reproducibility
 
@@ -101,6 +110,8 @@ with w2v_graph.as_default():
 	similarity = tf.matmul(
 		valid_embeddings, normalized_embeddings, transpose_b=True)
 
+	w2v_saver = tf.train.Saver()
+
 ###############################################################################################
 # full connected 
 ###############################################################################################
@@ -176,18 +187,20 @@ with fc_graph.as_default():
 	predicted = tf.cast(hypothesis > 0.5, dtype=tf.float32)
 	accuracy = tf.reduce_mean(tf.cast(tf.equal(predicted, y_data), dtype=tf.float32))
 
+	model_saver = tf.train.Saver()
+
+
 ###############################################################################################
 # for initializing the word embeddings from checkpoint!!
 ###############################################################################################
 with tf.Session(graph=w2v_graph) as session:
 	init = tf.global_variables_initializer()
-	saver = tf.train.Saver()
 	# We must initialize all variables before we use them.
 	init.run()
 	print('Initialized')
 
 	# save the variables to disk
-	save_path = saver.restore(session, "./saver/w2v.ckpt")
+	save_path = w2v_saver.restore(session, "./saver/w2v.ckpt")
 	print("word2vec restored")
 
 	# final_embeddings, dictionary
@@ -196,11 +209,12 @@ with tf.Session(graph=w2v_graph) as session:
 ###############################################################################################
 # training 
 ###############################################################################################
+"""
 iteration = 200
 batch_num = 1000
 with tf.Session(graph=fc_graph) as session:
 	init = tf.global_variables_initializer()
-	saver = tf.train.Saver()
+	model_saver = tf.train.Saver()
 	init.run()
 
 	train_size = int(len(_y_data) * 0.9)
@@ -219,7 +233,7 @@ with tf.Session(graph=fc_graph) as session:
 			avg_cost += c / total_batch
 
 		if epoch % 5 == 0:
-			save_path = saver.save(session, "./save_model/%dmodel.ckpt" % (epoch))
+			save_path = model_saver.save(session, "./save_model/%dmodel.ckpt" % (epoch))
 			print("model saved in file: %s" % save_path)
 			print('Epoch:', '%04d' % epoch, 'cost =', avg_cost)
 			# Accuracy report
@@ -229,3 +243,35 @@ with tf.Session(graph=fc_graph) as session:
 	a = session.run(accuracy, feed_dict={x_idx1: _x_data1[train_size:], x_idx2: _x_data2[train_size:],
 												 y_data: _y_data[train_size:], embeddings: final_embeddings})
 	print("Accuracy: ", a)
+"""
+###############################################################################################
+# predict & make API server
+###############################################################################################
+fc_session = tf.Session(graph=fc_graph)
+
+save_path = model_saver.restore(fc_session, "./save_model/%dmodel.ckpt" %(25))
+print("fc layer restored")
+
+def predict(_sentence1, _sentence2):
+	# sentence to idx
+	_sentence1 = np.array(sen2vec([_sentence1])).reshape(-1, 50)
+	_sentence2 = np.array(sen2vec([_sentence2])).reshape(-1, 50)
+	return fc_session.run(hypothesis, feed_dict={x_idx1: _sentence1, x_idx2: _sentence2, embeddings: final_embeddings})
+
+# initialize flask application
+app = Flask(__name__)
+#cors = CORS(app)
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+	if request.method == "POST":
+		s1 = request.form["sentence1"]
+		s2 = request.form["sentence2"]
+		result = predict(s1, s2)
+		print (s1, s2, result[0][0])
+		return render_template("index.html", result=result[0][0])
+
+	return render_template("index.html")
+
+if __name__ == '__main__':
+   app.run(host='0.0.0.0')
