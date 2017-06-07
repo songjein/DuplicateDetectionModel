@@ -1,0 +1,49 @@
+<!DOCTYPE>
+<html>
+<head>
+  <meta charset="utf-8">	
+
+	<script
+	  src="https://code.jquery.com/jquery-1.12.4.js"
+		  integrity="sha256-Qw82+bXyGq6MydymqBxNPYTaUXXq7c8v3CwiYwLLNXU="
+			  crossorigin="anonymous"></script>
+
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+	<div class="container">
+		<h1>Duplicate Sentence Detector</h1>
+		<div style="background:rgba(200,200,200,0.5);">
+			model : flatten ver.<br> 
+			train data: from kaggle...<br> 
+			test data: from kaggle...<br> 
+			<strong>accuracy : 77%</strong> <br> 
+		</div>
+
+		<div style="margin-top: 25px;"></div>
+
+		<h1>input two sentences </h1>
+		<form action="/" method="POST" class="form-inline">
+			<div class="form-group">
+				<input name="sentence1" type="text" class="form-control" style="width:500px;">
+				<br>
+				<input name="sentence2" type="text" class="form-control" style="width:500px;">
+			</div>
+			<button type="submit" class="btn btn-default">is Duplicate?</button>
+		</form>
+
+		{% if result %}
+			<h1>Result</h1>
+			{% if result < 0.5 %}
+				<h1 style="color:green">Different Sentence</h1>
+			{% else %}
+				<h1 style="color:red">Duplicate Sentence</h1>
+			{% endif %}
+		{% endif %}
+	</div>
+</body>
+</html>
+

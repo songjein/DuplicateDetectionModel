@@ -26,7 +26,6 @@ def make_voca(filename):
                 data += line[3].split() + line[4].split()
     return data
 
-
 def sen2vec(pure_data):
     vec_data = []
 
@@ -82,9 +81,10 @@ data, count, dictionary, reverse_dictionary = build_dataset(vocabulary,
                                                             vocabulary_size)
 del vocabulary  # Hint to reduce memory.
 
-x1 = np.array(sen2vec(data_train1))
-x2 = np.array(sen2vec(data_train2))
-y = np.array(data_label)
+if __name__ == '__main__':
+	x1 = np.array(sen2vec(data_train1))
+	x2 = np.array(sen2vec(data_train2))
+	y = np.array(data_label)
 
-print (x1.shape, x2.shape, y.shape)
-np.savez('train_idx.npz', train1=x1, train2=x2, label=y)
+	print (x1.shape, x2.shape, y.shape)
+	np.savez('train_idx.npz', train1=x1, train2=x2, label=y)

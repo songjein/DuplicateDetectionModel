@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from __future__ import division
+from __future__ import division 
 from __future__ import print_function
 import math
 import random
@@ -11,7 +11,7 @@ import time
 import datetime
 
 from flask import Flask, request, render_template
-from flask_cors import CORS, cross_origin
+#from flask_cors import CORS, cross_origin
 
 from word2idx import sen2vec
 
@@ -245,7 +245,7 @@ with tf.Session(graph=fc_graph) as session:
 	print("Accuracy: ", a)
 """
 ###############################################################################################
-# predict 
+# predict & make API server
 ###############################################################################################
 fc_session = tf.Session(graph=fc_graph)
 
@@ -258,11 +258,20 @@ def predict(_sentence1, _sentence2):
 	_sentence2 = np.array(sen2vec([_sentence2])).reshape(-1, 50)
 	return fc_session.run(hypothesis, feed_dict={x_idx1: _sentence1, x_idx2: _sentence2, embeddings: final_embeddings})
 
-while True:
-	print ("sentence1: ",)
-	s1 = raw_input()
-	print ("sentence2: ",)
-	s2 = raw_input()
+# initialize flask application
+app = Flask(__name__)
+#cors = CORS(app)
 
-	print ("result : ",)
-	print (predict(s1, s2))
+@app.route('/', methods=['GET', 'POST'])
+def index():
+	if request.method == "POST":
+		s1 = request.form["sentence1"]
+		s2 = request.form["sentence2"]
+		result = predict(s1, s2)
+		print (s1, s2, result[0][0])
+		return render_template("index.html", result=result[0][0])
+
+	return render_template("index.html")
+
+if __name__ == '__main__':
+   app.run(host='0.0.0.0')
