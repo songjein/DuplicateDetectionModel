@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from model_cnn_class import TextCNN
 import math
-import random
 import numpy as np
 import tensorflow as tf
 
@@ -101,84 +101,6 @@ with w2v_graph.as_default():
     similarity = tf.matmul(
         valid_embeddings, normalized_embeddings, transpose_b=True)
 
-
-num_filters = 50
-filter_size = 10
-###############################################################################################
-# full connected
-###############################################################################################
-with fc_graph.as_default():
-    MAX_WORD_LENGTH = 50
-
-    x_idx1  = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH], name='idx1')
-    x_idx2  = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH], name='idx2')
-
-    x_data1 = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH, embedding_size, 1], name='x_data1')
-    x_data2 = tf.placeholder(tf.int32, [None, MAX_WORD_LENGTH, embedding_size, 1], name='x_data2')
-    y_data  = tf.placeholder(tf.float32, [None, 1], name='y')
-
-    embeddings = tf.placeholder(tf.float32, [vocabulary_size, embedding_size])
-
-    x_data1 = tf.reshape(tf.nn.embedding_lookup(embeddings, x_idx1), [-1, MAX_WORD_LENGTH, embedding_size, 1])
-    x_data2 = tf.reshape(tf.nn.embedding_lookup(embeddings, x_idx2), [-1, MAX_WORD_LENGTH, embedding_size, 1])
-
-    # Filter for x_data1 (same dim)
-    conv1a = tf.layers.conv2d (inputs=x_data1, filters=num_filters, kernel_size=[filter_size, embedding_size], padding='VALID', activation=tf.nn.relu)
-    conv1a = tf.layers.max_pooling2d(inputs=conv1a, pool_size=[MAX_WORD_LENGTH-filter_size+1, 1], strides=1, padding='VALID')
-    conv1a = tf.nn.dropout(conv1a, keep_prob=0.7)
-    conv1a = tf.reshape(conv1a, [-1, 1 * 1 * num_filters])
-
-    print("conv1a")
-    print(conv1a)
-
-    # Filter for x_data2 (same dim)
-    conv1b = tf.layers.conv2d (inputs=x_data2, filters=num_filters, kernel_size=[filter_size, embedding_size], padding='VALID', activation=tf.nn.relu)
-    conv1b = tf.layers.max_pooling2d(inputs=conv1b, pool_size=[MAX_WORD_LENGTH-filter_size+1, 1], strides=1, padding='VALID')
-    conv1b = tf.nn.dropout(conv1b, keep_prob=0.7)
-    conv1b = tf.reshape(conv1b, [-1, 1 * 1 * num_filters])
-
-    print("conv1b")
-    print(conv1b)
-
-    # L1_A FC 25x64x32 inputs -> 51200 outputs
-    W_A         = tf.get_variable("W_A", shape=[1 * 1 * num_filters, 1],
-                           initializer=tf.contrib.layers.xavier_initializer())
-    b_A         = tf.Variable(tf.random_normal([1]))
-    fc_A        = tf.nn.relu(tf.matmul(conv1a, W_A) + b_A)
-    # L2_A = tf.nn.dropout(L2_A, keep_prob=0.7)
-    print("fc_A")
-    print(fc_A)
-
-    # second sentence ? x 128 => ? x 10
-    W_B         = tf.get_variable("W_B", shape=[1 * 1 * num_filters, 1],
-                           initializer=tf.contrib.layers.xavier_initializer())
-    b_B         = tf.Variable(tf.random_normal([1]))
-    fc_B        = tf.nn.relu(tf.matmul(conv1b, W_B) + b_B)
-    # L2_A = tf.nn.dropout(L2_A, keep_prob=0.7)
-    print("fc_B")
-    print(fc_B)
-
-    fc_merged = tf.concat([fc_A, fc_B], 1)
-    print("fc_merged")
-    print(fc_merged)
-
-    W          = tf.Variable(tf.random_normal([2 * 1, 1]))
-    b          = tf.Variable(tf.random_normal([1]))
-    hypothesis = tf.sigmoid(tf.matmul(fc_merged, W) + b)
-
-    print("hypothesis")
-    print(hypothesis)
-
-    # cost/loss function
-    cost = -tf.reduce_mean(y_data * tf.log(hypothesis) + (1 - y_data) * tf.log(1 - hypothesis))
-
-    train = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
-
-    # Accuracy computation
-    # True if hypothesis>0.5 else False
-    predicted = tf.cast(hypothesis > 0.5, dtype=tf.float32)
-    accuracy = tf.reduce_mean(tf.cast(tf.equal(predicted, y_data), dtype=tf.float32))
-
 ###############################################################################################
 # for initializing the word embeddings from checkpoint!!
 ###############################################################################################
@@ -199,35 +121,72 @@ with tf.Session(graph=w2v_graph) as session:
 ###############################################################################################
 # training
 ###############################################################################################
-iteration = 100
-batch_num = 50
+# Parameters
+MAX_WORD_LENGTH = 50
+filter_sizes=[2, 3, 4, 5]
+num_filters=8
+num_epochs = 64
+batch_num = 128
+
 with tf.Session(graph=fc_graph) as session:
+
+    cnn = TextCNN(MAX_WORD_LENGTH, vocabulary_size, embedding_size, filter_sizes, num_filters)
+
+    # Define training procedure
+    optimizer = tf.train.AdamOptimizer(0.001)
+    train_op = optimizer.minimize(cnn.cost)
+
+    train_size = int(len(_y_data) * 0.8)
+    test_size = len(_y_data) - train_size
+
+    trainX1, testX1 = np.array(_x_data1[0:train_size]), np.array(_x_data1[train_size:len(_x_data1)])
+    trainX2, testX2 = np.array(_x_data2[0:train_size]), np.array(_x_data2[train_size:len(_x_data2)])
+    trainY, testY = np.array(_y_data[0:train_size]), np.array(_y_data[train_size:len(_y_data)])
+
     init = tf.global_variables_initializer()
-    saver = tf.train.Saver()
+    # saver = tf.train.Saver()
     init.run()
 
-    train_size = int(len(_y_data) * 0.9)
-
-    for epoch in range(iteration + 1):
+    for epoch in range(num_epochs):
 
         avg_cost = 0
         total_batch = int(train_size / batch_num)
 
-        for iter in range(total_batch):
-            batch_x1 = _x_data1[iter * batch_num: (iter + 1) * batch_num]
-            batch_x2 = _x_data2[iter * batch_num: (iter + 1) * batch_num]
-            batch_y = _y_data[iter * batch_num: (iter + 1) * batch_num]
+        for iteration in range(total_batch):
 
-            c, _, = session.run([cost, train], feed_dict={x_idx1: batch_x1, x_idx2: batch_x2, y_data: batch_y, embeddings: final_embeddings})
-            avg_cost += c / total_batch
+            start_index = iteration * batch_size
+            end_index = min((iteration + 1) * batch_size, train_size)
+            batch_x1 = trainX1[start_index:end_index]
+            batch_x2 = trainX2[start_index:end_index]
+            batch_y = trainY[start_index:end_index]
 
-        # save_path = saver.save(session, "./save_model/%dmodel.ckpt" % (epoch))
+            # A single training step
+            _, loss = session.run([train_op, cnn.cost],
+                                  feed_dict={
+                                      cnn.x_idx1: batch_x1,
+                                      cnn.x_idx2: batch_x2,
+                                      cnn.y_data: batch_y,
+                                      cnn.embeddings: final_embeddings,
+                                      cnn.dropout_keep_prob: 0.5 })
+            avg_cost += loss / total_batch
+
+        # save_path = saver.save(session, "./save_model/cnn%dmodel.ckpt" % (epoch))
+
         print('Epoch:', '%04d' % epoch, 'cost =', avg_cost)
         # Accuracy report
-        a = session.run(accuracy, feed_dict={x_idx1: _x_data1[train_size:], x_idx2: _x_data2[train_size:],
-                                             y_data: _y_data[train_size:], embeddings: final_embeddings})
+        a = session.run(cnn.accuracy, feed_dict={
+            cnn.x_idx1: testX1[train_size:],
+            cnn.x_idx2: testX2[train_size:],
+            cnn.y_data: testY[train_size:],
+            cnn.embeddings: final_embeddings,
+            cnn.dropout_keep_prob: 1.0})
         print("Accuracy: ", a)
+
     # Accuracy report
-    a = session.run(accuracy, feed_dict={x_idx1: _x_data1[train_size:], x_idx2: _x_data2[train_size:],
-                                         y_data: _y_data[train_size:], embeddings: final_embeddings})
+    a = session.run(cnn.accuracy, feed_dict={
+            cnn.x_idx1: testX1[train_size:],
+            cnn.x_idx2: testX2[train_size:],
+            cnn.y_data: testY[train_size:],
+            cnn.embeddings: final_embeddings,
+            cnn.dropout_keep_prob: 1.0})
     print("Accuracy: ", a)
