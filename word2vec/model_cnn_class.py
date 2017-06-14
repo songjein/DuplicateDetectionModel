@@ -52,7 +52,7 @@ class TextCNN(object):
                     pool_size=[sequence_length - filter_size + 1, 1],
                     strides=1,
                     padding='VALID')
-                pooled1 = tf.nn.dropout(pooled1, keep_prob=0.5)
+                pooled1 = tf.nn.dropout(pooled1, self.dropout_keep_prob)
                 print ('pool1', pooled1)
 
                 # Convolution Layer2
@@ -70,20 +70,16 @@ class TextCNN(object):
                     pool_size=[sequence_length - filter_size + 1, 1],
                     strides=1,
                     padding='VALID')
-                pooled2 = tf.nn.dropout(pooled2, keep_prob=0.5)
+                pooled2 = tf.nn.dropout(pooled2, self.dropout_keep_prob)
                 print ('pool2', pooled2)
 
                 pooled_outputs1.append(pooled1)
                 pooled_outputs2.append(pooled2)
-                print('pooled_outputs1', pooled_outputs1)
-                print('pooled_outputs2', pooled_outputs2)
 
         # Combine all the pooled features
         num_filters_total = num_filters * len(filter_sizes)
         self.h_pool1 = tf.concat(pooled_outputs1, 3)
         self.h_pool2 = tf.concat(pooled_outputs2, 3)
-        print ('h_pool1', self.h_pool1)
-        print ('h_pool2', self.h_pool2)
 
         self.h_pool_flat1 = tf.reshape(self.h_pool1, [-1, num_filters_total])
         self.h_pool_flat2 = tf.reshape(self.h_pool2, [-1, num_filters_total])
@@ -115,8 +111,7 @@ class TextCNN(object):
             self.predicted = tf.cast(self.hypothesis > 0.5, dtype=tf.float32)
             print('predicted', self.predicted)
 
-
-        # CalculateMean cross-entropy loss
+        # Calculate Mean cross-entropy loss
         with tf.name_scope("loss"):
             self.cost = -tf.reduce_mean(self.y_data * tf.log(self.hypothesis) + (1 - self.y_data) * tf.log(1 - self.hypothesis))
 

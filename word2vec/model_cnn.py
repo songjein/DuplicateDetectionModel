@@ -112,7 +112,7 @@ with tf.Session(graph=w2v_graph) as session:
     print('Initialized')
 
     # save the variables to disk
-    save_path = saver.restore(session, "./saver/w2v.ckpt")
+    save_path = saver.restore(session, "./save_w2v/w2v-50000.ckpt")
     print("word2vec restored")
 
     # final_embeddings, dictionary
@@ -123,28 +123,28 @@ with tf.Session(graph=w2v_graph) as session:
 ###############################################################################################
 # Parameters
 MAX_WORD_LENGTH = 50
-filter_sizes=[2, 3, 4, 5]
-num_filters=8
-num_epochs = 64
-batch_num = 128
+filter_sizes    = [2, 4]
+num_filters     = 20
+num_epochs      = 64
+batch_num       = 128
 
 with tf.Session(graph=fc_graph) as session:
 
     cnn = TextCNN(MAX_WORD_LENGTH, vocabulary_size, embedding_size, filter_sizes, num_filters)
 
     # Define training procedure
-    optimizer = tf.train.AdamOptimizer(0.001)
+    optimizer = tf.train.AdamOptimizer(0.0001)
     train_op = optimizer.minimize(cnn.cost)
 
-    train_size = int(len(_y_data) * 0.8)
+    train_size = int(len(_y_data) * 0.9)
     test_size = len(_y_data) - train_size
 
-    trainX1, testX1 = np.array(_x_data1[0:train_size]), np.array(_x_data1[train_size:len(_x_data1)])
-    trainX2, testX2 = np.array(_x_data2[0:train_size]), np.array(_x_data2[train_size:len(_x_data2)])
+    trainX1, testX1 = np.array(_x_data1[0:train_size]), np.array(_x_data1[train_size:len(_y_data)])
+    trainX2, testX2 = np.array(_x_data2[0:train_size]), np.array(_x_data2[train_size:len(_y_data)])
     trainY, testY = np.array(_y_data[0:train_size]), np.array(_y_data[train_size:len(_y_data)])
 
     init = tf.global_variables_initializer()
-    # saver = tf.train.Saver()
+    saver = tf.train.Saver()
     init.run()
 
     for epoch in range(num_epochs):
@@ -167,26 +167,28 @@ with tf.Session(graph=fc_graph) as session:
                                       cnn.x_idx2: batch_x2,
                                       cnn.y_data: batch_y,
                                       cnn.embeddings: final_embeddings,
-                                      cnn.dropout_keep_prob: 0.5 })
+                                      cnn.dropout_keep_prob: 0.7 })
             avg_cost += loss / total_batch
 
-        # save_path = saver.save(session, "./save_model/cnn%dmodel.ckpt" % (epoch))
+        save_path = saver.save(session, "./save_model/cnn%dmodel.ckpt" % (epoch))
 
         print('Epoch:', '%04d' % epoch, 'cost =', avg_cost)
         # Accuracy report
-        a = session.run(cnn.accuracy, feed_dict={
-            cnn.x_idx1: testX1[train_size:],
-            cnn.x_idx2: testX2[train_size:],
-            cnn.y_data: testY[train_size:],
-            cnn.embeddings: final_embeddings,
-            cnn.dropout_keep_prob: 1.0})
+        a = session.run(cnn.accuracy,
+                        feed_dict={
+                            cnn.x_idx1: testX1[train_size:],
+                            cnn.x_idx2: testX2[train_size:],
+                            cnn.y_data: testY[train_size:],
+                            cnn.embeddings: final_embeddings,
+                            cnn.dropout_keep_prob: 1.0})
         print("Accuracy: ", a)
 
     # Accuracy report
-    a = session.run(cnn.accuracy, feed_dict={
-            cnn.x_idx1: testX1[train_size:],
-            cnn.x_idx2: testX2[train_size:],
-            cnn.y_data: testY[train_size:],
-            cnn.embeddings: final_embeddings,
-            cnn.dropout_keep_prob: 1.0})
+    a = session.run(cnn.accuracy,
+                    feed_dict={
+                        cnn.x_idx1: testX1[train_size:],
+                        cnn.x_idx2: testX2[train_size:],
+                        cnn.y_data: testY[train_size:],
+                        cnn.embeddings: final_embeddings,
+                        cnn.dropout_keep_prob: 1.0})
     print("Accuracy: ", a)
