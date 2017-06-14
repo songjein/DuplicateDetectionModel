@@ -123,17 +123,17 @@ with tf.Session(graph=w2v_graph) as session:
 ###############################################################################################
 # Parameters
 MAX_WORD_LENGTH = 50
-filter_sizes    = [2, 4]
-num_filters     = 20
+filter_sizes    = [1, 2, 3, 4, 5]
+num_filters     = 32
 num_epochs      = 64
-batch_num       = 128
+batch_num       = 256
 
 with tf.Session(graph=fc_graph) as session:
 
     cnn = TextCNN(MAX_WORD_LENGTH, vocabulary_size, embedding_size, filter_sizes, num_filters)
 
     # Define training procedure
-    optimizer = tf.train.AdamOptimizer(0.0001)
+    optimizer = tf.train.AdamOptimizer(0.001)
     train_op = optimizer.minimize(cnn.cost)
 
     train_size = int(len(_y_data) * 0.9)
@@ -143,6 +143,7 @@ with tf.Session(graph=fc_graph) as session:
     trainX2, testX2 = np.array(_x_data2[0:train_size]), np.array(_x_data2[train_size:len(_y_data)])
     trainY, testY = np.array(_y_data[0:train_size]), np.array(_y_data[train_size:len(_y_data)])
 
+    print (trainX1.shape, trainX2.shape, trainY.shape, testX1.shape, testX2.shape, testY.shape)
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
     init.run()
@@ -154,8 +155,8 @@ with tf.Session(graph=fc_graph) as session:
 
         for iteration in range(total_batch):
 
-            start_index = iteration * batch_size
-            end_index = min((iteration + 1) * batch_size, train_size)
+            start_index = iteration * batch_num
+            end_index = min((iteration + 1) * batch_num, train_size)
             batch_x1 = trainX1[start_index:end_index]
             batch_x2 = trainX2[start_index:end_index]
             batch_y = trainY[start_index:end_index]
@@ -176,9 +177,9 @@ with tf.Session(graph=fc_graph) as session:
         # Accuracy report
         a = session.run(cnn.accuracy,
                         feed_dict={
-                            cnn.x_idx1: testX1[train_size:],
-                            cnn.x_idx2: testX2[train_size:],
-                            cnn.y_data: testY[train_size:],
+                            cnn.x_idx1: testX1,
+                            cnn.x_idx2: testX2,
+                            cnn.y_data: testY,
                             cnn.embeddings: final_embeddings,
                             cnn.dropout_keep_prob: 1.0})
         print("Accuracy: ", a)
@@ -186,9 +187,9 @@ with tf.Session(graph=fc_graph) as session:
     # Accuracy report
     a = session.run(cnn.accuracy,
                     feed_dict={
-                        cnn.x_idx1: testX1[train_size:],
-                        cnn.x_idx2: testX2[train_size:],
-                        cnn.y_data: testY[train_size:],
+                        cnn.x_idx1: testX1,
+                        cnn.x_idx2: testX2,
+                        cnn.y_data: testY,
                         cnn.embeddings: final_embeddings,
                         cnn.dropout_keep_prob: 1.0})
     print("Accuracy: ", a)

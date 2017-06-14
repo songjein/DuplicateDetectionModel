@@ -50,7 +50,7 @@ class TextCNN(object):
                 pooled1 = tf.layers.max_pooling2d(
                     inputs=conv1,
                     pool_size=[sequence_length - filter_size + 1, 1],
-                    strides=1,
+                    strides=[1, 1],
                     padding='VALID')
                 pooled1 = tf.nn.dropout(pooled1, self.dropout_keep_prob)
                 print ('pool1', pooled1)
@@ -68,7 +68,7 @@ class TextCNN(object):
                 pooled2 = tf.layers.max_pooling2d(
                     inputs=conv2,
                     pool_size=[sequence_length - filter_size + 1, 1],
-                    strides=1,
+                    strides=[1, 1],
                     padding='VALID')
                 pooled2 = tf.nn.dropout(pooled2, self.dropout_keep_prob)
                 print ('pool2', pooled2)
@@ -99,7 +99,7 @@ class TextCNN(object):
 
         # Merged fully connected layer2
         with tf.name_scope("merged_layer2"):
-            self.fc_merged2      = tf.contrib.layers.fully_connected(self.fc_merged_drop1, 32, activation_fn=tf.nn.relu)
+            self.fc_merged2      = tf.contrib.layers.fully_connected(self.fc_merged_drop1, 256, activation_fn=tf.nn.relu)
             self.fc_merged_drop2 = tf.nn.dropout(self.fc_merged2, self.dropout_keep_prob)
         print('fc_merged2', self.fc_merged_drop2)
 
