@@ -15,7 +15,7 @@ from flask import Flask, request, render_template
 
 from word2idx import sen2vec
 
-tf.set_random_seed(777)  # reproducibility
+tf.set_random_seed(random.randrange(1,100000))  # reproducibility
 
 ###############################################################################################
 # data load
@@ -76,7 +76,7 @@ with w2v_graph.as_default():
 	valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
 	# Ops and variables pinned to the CPU because of missing GPU implementation
-	with tf.device('/cpu:0'):
+	with tf.device('/gpu:0'):
 		# Look up embeddings for inputs.
 		embeddings = tf.Variable(
 			tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
@@ -130,57 +130,64 @@ with fc_graph.as_default():
 	x_data1 = tf.reshape(tf.nn.embedding_lookup(embeddings, x_idx1), [-1, MAX_WORD_LENGTH * embedding_size])
 	x_data2 = tf.reshape(tf.nn.embedding_lookup(embeddings, x_idx2), [-1, MAX_WORD_LENGTH * embedding_size])
 
-	print (x_data2)
-	# Filter for x_data1 (same dim)
-	W1 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH * embedding_size, 1000]))
-	b1 = tf.Variable(tf.random_normal([1000]))
+	# first sentence 
+	W1 = tf.get_variable("W1", shape=[MAX_WORD_LENGTH * embedding_size, 500], initializer=tf.contrib.layers.xavier_initializer())
+	b1 = tf.Variable(tf.random_normal([500]))
 	L1 = tf.nn.sigmoid(tf.matmul(x_data1, W1) + b1)
-	# ? x 50 x 128 => ? x 128
 	print("L1")
 	print(L1)
 
-	# first sentence ? x 128 => ? x 10
-	W1_1 = tf.Variable(tf.random_normal([1000, 500]))
-	b1_1 = tf.Variable(tf.random_normal([500]))
+	W1_1 = tf.get_variable("W1_1", shape=[500, 250], initializer=tf.contrib.layers.xavier_initializer())
+	b1_1 = tf.Variable(tf.random_normal([250]))
 	L1_1 = tf.nn.sigmoid(tf.matmul(L1, W1_1) + b1_1)
 	print("L1_1")
 	print(L1_1)
 
-	# Filter for x_data2 (same dim) 
-	W2 = tf.Variable(tf.random_normal([MAX_WORD_LENGTH * embedding_size, 1000]))
-	b2 = tf.Variable(tf.random_normal([1000]))
+	W1_2 = tf.get_variable("W1_2", shape=[250, 100], initializer=tf.contrib.layers.xavier_initializer())
+	b1_2 = tf.Variable(tf.random_normal([100]))
+	L1_2 = tf.nn.sigmoid(tf.matmul(L1_1, W1_2) + b1_2)
+	print("L1_2")
+	print(L1_2)
+
+	# second sentence 
+	W2 = tf.get_variable("W2", shape=[MAX_WORD_LENGTH * embedding_size, 500], initializer=tf.contrib.layers.xavier_initializer())
+	b2 = tf.Variable(tf.random_normal([500]))
 	L2 = tf.nn.sigmoid(tf.matmul(x_data2, W2) + b2)
-	# ? x 50 x 128  => ? x 128
 	print("L2")
 	print(L2)
 
-	# second sentence ? x 128 => ? x 10
-	W2_1 = tf.Variable(tf.random_normal([1000, 500]))
-	b2_1 = tf.Variable(tf.random_normal([500]))
+	W2_1 = tf.get_variable("W2_1", shape=[500, 250], initializer=tf.contrib.layers.xavier_initializer())
+	b2_1 = tf.Variable(tf.random_normal([250]))
 	L2_1 = tf.nn.sigmoid(tf.matmul(L2, W2_1) + b2_1)
 	print("L2_1")
 	print(L2_1)
 
-	x_merged = tf.concat([L1_1, L2_1], 1)  
-	# ? x 20 
+	W2_2 = tf.get_variable("W2_2", shape=[250, 100], initializer=tf.contrib.layers.xavier_initializer())
+	b2_2 = tf.Variable(tf.random_normal([100]))
+	L2_2 = tf.nn.sigmoid(tf.matmul(L2_1, W2_2) + b2_2)
+	print("L2_2")
+	print(L2_2)
+
+	x_merged = tf.concat([L1_2, L2_2], 1)  
 	print("x_merged")
 	print(x_merged)
 
-	W3 = tf.Variable(tf.random_normal([2 * 500, 500]))
-	b3 = tf.Variable(tf.random_normal([500]))
-	L3 = tf.nn.sigmoid(tf.matmul(x_merged, W3 + b3))
+	W3 = tf.get_variable("W3", shape=[2 * 100, 50], initializer=tf.contrib.layers.xavier_initializer())
+	b3 = tf.Variable(tf.random_normal([50]))
+	L3 = tf.nn.sigmoid(tf.matmul(x_merged, W3) + b3)
+	print("L3")
+	print(L3)
 
-	W4 = tf.Variable(tf.random_normal([500, 1]))
+	W4 = tf.get_variable("W4", shape=[50, 1], initializer=tf.contrib.layers.xavier_initializer())
 	b4 = tf.Variable(tf.random_normal([1]))
 	hypothesis = tf.sigmoid(tf.matmul(L3, W4) + b4)
-
 	print("hypothesis")
 	print(hypothesis)
 
 	# cost/loss function
 	cost = -tf.reduce_mean(y_data * tf.log(hypothesis) + (1 - y_data) * tf.log(1 - hypothesis))
 
-	train = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
+	train = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(cost)
 
 	# Accuracy computation
 	# True if hypothesis>0.5 else False
@@ -200,7 +207,7 @@ with tf.Session(graph=w2v_graph) as session:
 	print('Initialized')
 
 	# save the variables to disk
-	save_path = w2v_saver.restore(session, "./saver/w2v.ckpt")
+	save_path = w2v_saver.restore(session, "./save_w2v/w2v.ckpt")
 	print("word2vec restored")
 
 	# final_embeddings, dictionary
@@ -209,7 +216,6 @@ with tf.Session(graph=w2v_graph) as session:
 ###############################################################################################
 # training 
 ###############################################################################################
-"""
 iteration = 200
 batch_num = 1000
 with tf.Session(graph=fc_graph) as session:
@@ -232,7 +238,8 @@ with tf.Session(graph=fc_graph) as session:
 			c, _, = session.run([cost, train], feed_dict={x_idx1: batch_x1, x_idx2: batch_x2, y_data: batch_y, embeddings: final_embeddings})
 			avg_cost += c / total_batch
 
-		if epoch % 5 == 0:
+		#if epoch % 5 == 0:
+		if True:
 			save_path = model_saver.save(session, "./save_model/%dmodel.ckpt" % (epoch))
 			print("model saved in file: %s" % save_path)
 			print('Epoch:', '%04d' % epoch, 'cost =', avg_cost)
@@ -243,10 +250,11 @@ with tf.Session(graph=fc_graph) as session:
 	a = session.run(accuracy, feed_dict={x_idx1: _x_data1[train_size:], x_idx2: _x_data2[train_size:],
 												 y_data: _y_data[train_size:], embeddings: final_embeddings})
 	print("Accuracy: ", a)
-"""
+
 ###############################################################################################
 # predict & make API server
 ###############################################################################################
+"""
 fc_session = tf.Session(graph=fc_graph)
 
 save_path = model_saver.restore(fc_session, "./save_model/%dmodel.ckpt" %(25))
@@ -275,3 +283,4 @@ def index():
 
 if __name__ == '__main__':
    app.run(host='0.0.0.0')
+"""
