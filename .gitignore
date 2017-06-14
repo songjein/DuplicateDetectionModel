@@ -1,4 +1,5 @@
 *.csv
 */saver/*
-*/save_model*/*
+*/save_model/checkpoint
+*/save_model/*
 *.npz
