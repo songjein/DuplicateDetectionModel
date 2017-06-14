@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from model_cnn_class import TextCNN
+from model_cnn_class2 import TextCNN
 import math
 import numpy as np
 import tensorflow as tf
@@ -125,16 +125,17 @@ with tf.Session(graph=w2v_graph) as session:
 MAX_WORD_LENGTH = 50
 filter_sizes    = [2, 3, 4, 5]
 num_filters     = 16
-num_epochs      = 128
+num_epochs      = 75
 batch_num       = 512
+learning_rate   = 0.0001
 
 with tf.Session(graph=fc_graph) as session:
 
-    cnn = TextCNN(MAX_WORD_LENGTH, vocabulary_size, embedding_size, filter_sizes, num_filters)
-
-    # Define training procedure
-    optimizer = tf.train.AdamOptimizer(0.0001)
-    train_op = optimizer.minimize(cnn.cost)
+    models = []
+    num_models = 3
+    for m in range(num_models):
+        models.append(TextCNN(MAX_WORD_LENGTH, vocabulary_size, embedding_size, filter_sizes, num_filters, learning_rate))
+    avg_cost_list = np.zeros(len(models))
 
     train_size = int(len(_y_data) * 0.9)
     test_size = len(_y_data) - train_size
@@ -150,7 +151,6 @@ with tf.Session(graph=fc_graph) as session:
 
     for epoch in range(num_epochs):
 
-        avg_cost = 0
         total_batch = int(train_size / batch_num)
 
         for iteration in range(total_batch):
@@ -161,19 +161,17 @@ with tf.Session(graph=fc_graph) as session:
             batch_x2 = trainX2[start_index:end_index]
             batch_y = trainY[start_index:end_index]
 
-            # A single training step
-            _, loss, acc = session.run([train_op, cnn.cost, cnn.accuracy],
-                                  feed_dict={
-                                      cnn.x_idx1: batch_x1,
-                                      cnn.x_idx2: batch_x2,
-                                      cnn.y_data: batch_y,
-                                      cnn.embeddings: final_embeddings,
-                                      cnn.dropout_keep_prob: 0.5 })
-            avg_cost += loss / total_batch
-
+            # train each model
+            for m_idx, m in enumerate(models):
+                _, loss = session.run([m.train, m.cost], feed_dict={
+                                      m.x_idx1: batch_x1,
+                                      m.x_idx2: batch_x2,
+                                      m.y_data: batch_y,
+                                      m.embeddings: final_embeddings,
+                                      m.dropout_keep_prob: 0.5 })
+                avg_cost_list[m_idx] += loss / total_batch
         save_path = saver.save(session, "./save_model/cnn%dmodel.ckpt" % (epoch))
-
-        print('Epoch:', '%04d' % epoch, 'cost =', avg_cost, 'accuracy', acc)
+        print('Epoch:', '%04d' % epoch, 'cost =', avg_cost_list)
         # Accuracy report
         # a = session.run(cnn.accuracy,
         #                 feed_dict={
@@ -184,12 +182,24 @@ with tf.Session(graph=fc_graph) as session:
         #                     cnn.dropout_keep_prob: 1.0})
         # print("Accuracy: ", a)
 
-    # Accuracy report
-    a = session.run(cnn.accuracy,
-                    feed_dict={
-                        cnn.x_idx1: testX1,
-                        cnn.x_idx2: testX2,
-                        cnn.y_data: testY,
-                        cnn.embeddings: final_embeddings,
-                        cnn.dropout_keep_prob: 1.0})
-    print("Accuracy: ", a)
+    # Test model and check accuracy
+    predictions = np.zeros(test_size * 2).reshape(test_size, 2)
+    for m_idx, m in enumerate(models):
+
+        pred, acc = session.run([m.output, m.accuracy], feed_dict={
+            m.x_idx1: testX1,
+            m.x_idx2: testX2,
+            m.y_data: testY,
+            m.embeddings: final_embeddings,
+            m.dropout_keep_prob: 1.0 })
+
+        avg_cost_list[m_idx] += loss / total_batch
+        predictions += pred
+        print(m_idx, 'Accuracy:', acc)
+        print(predictions)
+
+    ensemble_correct_prediction = tf.equal(
+        tf.argmax(predictions, 1), tf.argmax(tf.reshape(tf.one_hot(testY, 2), [-1, 2]), 1))
+    ensemble_accuracy = tf.reduce_mean(
+        tf.cast(ensemble_correct_prediction, tf.float32))
+    print('Ensemble accuracy:', session.run(ensemble_accuracy))
